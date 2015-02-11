@@ -1,4 +1,4 @@
-function F = lower_constraint_Psi(Y_0, Y_end, dy)
+function [F, params] = lower_constraint_Psi(Y_0, Y_end, dy)
 % ‘ункци€ генерирует кривую, отрезок, на котором она строитс€, и ее
 % производную таким образом, чтобы выполн€лось ограничение Psi(y) / dy <
 % constr2
@@ -81,6 +81,7 @@ if (cond)
     dPsi_2 = replace_part(2,:);
     x_2 = y_left(1):dy:y_right(1);
     F = [x_2; Psi_2; dPsi_2];
+    params = [d; 0; 0];
 else
     disp('јлгоритм завершил свою работу');
     F = false;

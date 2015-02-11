@@ -1,4 +1,4 @@
-function [F1, F2] = lower_constraint_dPsi(Y_0, Y_end, dy, dy_constr1)
+function [F1, F2, params, coefs] = lower_constraint_dPsi(Y_0, Y_end, dy, dy_constr1)
 
 delta = Y_end(1) - Y_0(1);
 
@@ -54,21 +54,19 @@ for i=1:N
 end
 
 y_1 = y_left(1):dy:y_right(1);
-tau = (y_1 - y_left(1)) / (y_right(1) - y_left(1));     % tau = \tilde{y}
+y_norm = (y_1 - y_left(1)) / (y_right(1) - y_left(1));     % tau = \tilde{y}
 h_d = 0.01;
 for d = 0:h_d:10
-    Psi_1 = c0 + c1*(y_1 - Y_0(1)) + c2*(y_1 - Y_0(1)).^2 + c3*(y_1 - Y_0(1)).^3 + d*tau.^2.*(3 - 2*tau);
-    dPsi_1 = c1 + 2*c2*(y_1 - Y_0(1)) + 3*c3*(y_1 - Y_0(1)).^2 + d*(6*tau - 6*tau.^2);
+    Psi_1 = c0 + c1*(y_1 - Y_0(1)) + c2*(y_1 - Y_0(1)).^2 + c3*(y_1 - Y_0(1)).^3 + d*y_norm.^2.*(3 - 2*y_norm);
+    dPsi_1 = c1 + 2*c2*(y_1 - Y_0(1)) + 3*c3*(y_1 - Y_0(1)).^2 + d*(6*y_norm - 6*y_norm.^2);
     if (min(dPsi_1) > dy_constr1)
         break;
     end
 end
 
-plot(y_1,Psi_1,'g','LineWidth',2);
+Y_1_end = [y_right(1) Psi_1(end) dPsi_1(end)*Psi_1(end)];
 
-Y_2_end = [y_right(1) Psi_1(end) dPsi_1(end)*Psi_1(end)];
-
-replace_part = curve_synthesis(Y_2_end, Y_end, dy, 0);
+replace_part = curve_synthesis(Y_1_end, Y_end, dy, 0);
 
 Psi_2 = replace_part(1,:);
 dPsi_2 = replace_part(2,:);
@@ -77,3 +75,8 @@ y_2 = y_right(1):dy:Y_end(1);
 
 F1 = [y_1; Psi_1; dPsi_1];
 F2 = [y_2; Psi_2; dPsi_2];
+params = [d; Y_0(1); 0];
+
+coefs_2 = calc_coefs(Y_1_end, Y_end);
+
+coefs = [c0 c1 c2 c3; coefs_2; 0 0 0 0];

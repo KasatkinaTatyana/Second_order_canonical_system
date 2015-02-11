@@ -21,6 +21,7 @@ constr2 = 1.6;
 dy_constr1 = -1.7;
 dy_constr2 = 0.5;
 %%
+% global Y_0 Y_end c0 c1 c2 c3 % debug
 Y_0 =   [y0    dy0    ddy0];
 Y_end = [yend  dyend  ddyend];
 
@@ -76,10 +77,34 @@ figure(3);
 hold on; grid on;
 xlabel('y');
 ylabel('dy / d\tau');
-title('Управление u(\tau)');
+title('Управление u(y)');
 u = Psi.*dPsi - sin(y);
+
+u_t = u; % управление, которое используется для моделирования
+
 plot(y,u);
 
+%% debug
+% r1 = -0.1; r2 = -0.1;
+% c1_st = -(r1 + r2);
+% c0_st = r1*r2;
+% 
+% [T, Y] = ode45(@kan_system, [0, tend], [y0 dy0]);
+% 
+% set(0,'CurrentFigure',1);
+% plot(Y(:,1),Y(:,2));
+%% Массив, в котором будут содержаться коэффициенты для управлений
+global control_arr
+control_arr = [Y_0(1) Y_end(1) c0 c1 c2 c3 0 0 0];
+% третья цифра с конца - значение параметра d, вторая цифра с конца - тип кривой
+% последняя цифра - если тип кривой равен 2, то это значение Y_0(1) = y_0_glob из
+% метода lower/upper_constraint_dPsi
+% типы будут следующие:
+% 0 - кривая вида Psi(y) = c0 + c1*(y - y_0) + c2*(y - y_0)^2 + c3*(y - y_0)^3;
+% 1 - кривая вида Psi(y) = c0 + c1*(y - y_0) + c2*(y - y_0)^2 + c3*(y - y_0)^3 + d*(y - y0)^2*(y - y_end)^2
+% 2 - кривая вида Psi(y) = c0 + c1*(y - y_0_glob) + c2*(y - y_0_glob)^2 + c3*(y -y_0_glob)^3 + d*y_norm.^2.*(3 - 2*y_norm), 
+% где y_norm = (y - y_0) / (y_end - y_0);
+% первый элемент этой структуры
 
 %% Убираю выход за ограничение dPsi / dy < dy_constr2
 % [data1, data2] = upper_constraint_dPsi(Y_0, Y_end, dy, dy_constr2);
@@ -99,7 +124,7 @@ plot(y,u);
 % plot(y_2, dPsi_2, 'm','LineWidth',2);
 
 %% Убираю выход за ограничение dPsi / dy > dy_constr1
-[data1, data2] = lower_constraint_dPsi(Y_0, Y_end, dy, dy_constr1);
+[data1, data2, par, coefs] = lower_constraint_dPsi(Y_0, Y_end, dy, dy_constr1);
 y_1 = data1(1,:);
 Psi_1 = data1(2,:);
 dPsi_1 = data1(3,:);
@@ -121,55 +146,105 @@ set(0,'CurrentFigure',3);
 plot(y_1, u_1, 'g');
 plot(y_2, u_2, 'm');
 
-Y_0_new = [data1(1,end) data1(2,end) data1(3,end)*data1(2,end)];
-[data1, data2] = lower_constraint_dPsi(Y_0_new, Y_end, dy, dy_constr1);
-y_1 = data1(1,:);
-Psi_1 = data1(2,:);
-dPsi_1 = data1(3,:);
-u_1 = Psi_1.*dPsi_1 - sin(y_1);
-y_2 = data2(1,:);
-Psi_2 = data2(2,:);
-dPsi_2 = data2(3,:);
-u_2 = Psi_2.*dPsi_2 - sin(y_2);
+%% параллельно формирую управление u_t, которое будет являться управлением
+%  с учетом корректировок
+arr_1 = abs(y - y_1(1));
+[temp, ind] = min(arr_1);
 
-set(0,'CurrentFigure',1);
-plot(y_1, Psi_1, 'g');
-plot(y_2, Psi_2, 'm');
+for i = 1:length(y_1)
+    u_t(ind + i - 1) = u_1(i);
+end
 
-set(0,'CurrentFigure',2);
-plot(y_1, dPsi_1, 'g');
-plot(y_2, dPsi_2, 'm');
+arr_2 = abs(y - y_2(1));
+[temp, ind] = min(arr_2);
 
-set(0,'CurrentFigure',3);
-plot(y_1, u_1, 'g');
-plot(y_2, u_2, 'm');
-%% Убираю выход за ограничение на Psi(y) < constr2
-% если кривая уже корректировалась 
-% из-за выхода за ограничение по dPsi(y) / dy. Вместо точки Y_0 надо взять
-% Y_0 = [data1(1,end) data1(2,end) data1(3,end)*data1(2,end)]; 
-data = upper_constraint_Psi(Y_0, Y_end, dy); 
-y_3 = data(1,:);
-Psi_3 = data(2,:);
-dPsi_3 = data(3,:);
-u_3 = Psi_3.*dPsi_3 - sin(y_3);
+for i = 1:length(y_2)
+    u_t(ind + i - 1) = u_2(i);
+end
 
-set(0,'CurrentFigure',1);
-plot(y_3, Psi_3, 'r');
-set(0,'CurrentFigure',2);
-plot(y_3, dPsi_3, 'r');
-set(0,'CurrentFigure',3);
-plot(y_3, u_3, 'r');
+control_arr = [control_arr; ...
+    y_1(1) y_1(end) coefs(1,:) par(1) 2 par(2)];
+%% Но производная все еще выходит за ограничение, поэтому провожу процедуру
+%  коректировки второй раз
 
-%% Убираю выход за ограничение на Psi(y) > constr1
+% Y_0_new = [data1(1,end) data1(2,end) data1(3,end)*data1(2,end)];
+% [data1, data2] = lower_constraint_dPsi(Y_0_new, Y_end, dy, dy_constr1);
+% y_1 = data1(1,:);
+% Psi_1 = data1(2,:);
+% dPsi_1 = data1(3,:);
+% u_1 = Psi_1.*dPsi_1 - sin(y_1);
+% y_2 = data2(1,:);
+% Psi_2 = data2(2,:);
+% dPsi_2 = data2(3,:);
+% u_2 = Psi_2.*dPsi_2 - sin(y_2);
+% 
+% set(0,'CurrentFigure',1);
+% plot(y_1, Psi_1, 'g');
+% plot(y_2, Psi_2, 'm');
+% 
+% set(0,'CurrentFigure',2);
+% plot(y_1, dPsi_1, 'g');
+% plot(y_2, dPsi_2, 'm');
+% 
+% set(0,'CurrentFigure',3);
+% plot(y_1, u_1, 'g');
+% plot(y_2, u_2, 'm');
+% 
+% %% параллельно формирую управление u_t, которое будет являться управлением
+% %  с учетом корректировок
+% arr_1 = abs(y - y_1(1));
+% [temp, ind] = min(arr_1);
+% 
+% for i = 1:length(y_1)
+%     u_t(ind + i - 1) = u_1(i);
+% end
+% 
+% arr_2 = abs(y - y_2(1));
+% [temp, ind] = min(arr_2);
+% 
+% for i = 1:length(y_2)
+%     u_t(ind + i - 1) = u_2(i);
+% end
+% %% Убираю выход за ограничение на Psi(y) < constr2
 % % если кривая уже корректировалась 
 % % из-за выхода за ограничение по dPsi(y) / dy. Вместо точки Y_0 надо взять
-% Y_0 = [data1(1,end) data1(2,end) data1(3,end)*data1(2,end)]; 
-% data = lower_constraint_Psi(Y_0, Y_end, dy); 
+% % Y_0 = [data1(1,end) data1(2,end) data1(3,end)*data1(2,end)]; 
+% data = upper_constraint_Psi(Y_0, Y_end, dy); 
 % y_3 = data(1,:);
 % Psi_3 = data(2,:);
 % dPsi_3 = data(3,:);
+% u_3 = Psi_3.*dPsi_3 - sin(y_3);
 % 
 % set(0,'CurrentFigure',1);
-% plot(y_3, Psi_3, 'r','LineWidth',2);
+% plot(y_3, Psi_3, 'r');
 % set(0,'CurrentFigure',2);
 % plot(y_3, dPsi_3, 'r');
+% set(0,'CurrentFigure',3);
+% plot(y_3, u_3, 'r');
+% 
+% arr_3 = abs(y - y_3(1));
+% [temp, ind] = min(arr_3);
+% 
+% for i = 1:length(y_3)
+%     u_t(ind + i - 1) = u_3(i);
+% end
+% 
+% plot(y,u_t,'y');
+% 
+% %% Убираю выход за ограничение на Psi(y) > constr1
+% % % если кривая уже корректировалась 
+% % % из-за выхода за ограничение по dPsi(y) / dy. Вместо точки Y_0 надо взять
+% % Y_0 = [data1(1,end) data1(2,end) data1(3,end)*data1(2,end)]; 
+% % data = lower_constraint_Psi(Y_0, Y_end, dy); 
+% % y_3 = data(1,:);
+% % Psi_3 = data(2,:);
+% % dPsi_3 = data(3,:);
+% % 
+% % set(0,'CurrentFigure',1);
+% % plot(y_3, Psi_3, 'r','LineWidth',2);
+% % set(0,'CurrentFigure',2);
+% % plot(y_3, dPsi_3, 'r');
+% В значение params первого элемента массива структур записываю значимое количество элементов
+plot(y,u_t,'y');
+
+traj = time_modeling(Y_0);
