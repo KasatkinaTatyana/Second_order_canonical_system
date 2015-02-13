@@ -54,7 +54,7 @@ for i=1:N
 end
 
 y_1 = y_left(1):dy:y_right(1);
-y_norm = (y_1 - y_left(1)) / (y_right(1) - y_left(1));     % tau = \tilde{y}
+y_norm = (y_1 - y_left(1)) / (y_right(1) - y_left(1));     
 h_d = 0.01;
 for d = 0:h_d:10
     Psi_1 = c0 + c1*(y_1 - Y_0(1)) + c2*(y_1 - Y_0(1)).^2 + c3*(y_1 - Y_0(1)).^3 + d*y_norm.^2.*(3 - 2*y_norm);

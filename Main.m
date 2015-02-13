@@ -18,7 +18,7 @@ ddyend = uend + sin(yend);
 global constr1 constr2
 constr1 = -0.85;
 constr2 = 1.6;
-dy_constr1 = -1.7;
+dy_constr1 = -1.8;
 dy_constr2 = 0.5;
 %%
 % global Y_0 Y_end c0 c1 c2 c3 % debug
@@ -95,10 +95,13 @@ plot(y,u);
 % plot(Y(:,1),Y(:,2));
 %% Массив, в котором будут содержаться коэффициенты для управлений
 global control_arr
-control_arr = [Y_0(1) Y_end(1) c0 c1 c2 c3 0 0 0];
-% третья цифра с конца - значение параметра d, вторая цифра с конца - тип кривой
-% последняя цифра - если тип кривой равен 2, то это значение Y_0(1) = y_0_glob из
-% метода lower/upper_constraint_dPsi
+control_arr = [Y_0(1) Y_end(1) c0 c1 c2 c3 0 0 0 0];
+% четвертая цифра с конца - значение параметра d, третья цифра с конца - тип кривой
+% вторая цифра - если тип кривой равен 2, то это значение Y_0(1) = y_0_glob из
+% метода lower/upper_constraint_dPsi; последняя цифра - если тип кривой
+% равен 2, то вычисляется сколько времени прошло с начала, до момента
+% прихода в начальную точку текущего фрагмента, это значение вычисляется в
+% time_modeling.
 % типы будут следующие:
 % 0 - кривая вида Psi(y) = c0 + c1*(y - y_0) + c2*(y - y_0)^2 + c3*(y - y_0)^3;
 % 1 - кривая вида Psi(y) = c0 + c1*(y - y_0) + c2*(y - y_0)^2 + c3*(y - y_0)^3 + d*(y - y0)^2*(y - y_end)^2
@@ -123,7 +126,7 @@ control_arr = [Y_0(1) Y_end(1) c0 c1 c2 c3 0 0 0];
 % plot(y_1, dPsi_1, 'g','LineWidth',2);
 % plot(y_2, dPsi_2, 'm','LineWidth',2);
 
-%% Убираю выход за ограничение dPsi / dy > dy_constr1
+% %% Убираю выход за ограничение dPsi / dy > dy_constr1
 [data1, data2, par, coefs] = lower_constraint_dPsi(Y_0, Y_end, dy, dy_constr1);
 y_1 = data1(1,:);
 Psi_1 = data1(2,:);
@@ -163,7 +166,9 @@ for i = 1:length(y_2)
 end
 
 control_arr = [control_arr; ...
-    y_1(1) y_1(end) coefs(1,:) par(1) 2 par(2)];
+    y_1(1) y_1(end) coefs(1,:) par(1) 2 par(2) 0];
+control_arr = [control_arr; ...
+    y_2(1) y_2(end) coefs(2,:) 0 0 0 0];
 %% Но производная все еще выходит за ограничение, поэтому провожу процедуру
 %  коректировки второй раз
 
@@ -205,32 +210,32 @@ control_arr = [control_arr; ...
 % for i = 1:length(y_2)
 %     u_t(ind + i - 1) = u_2(i);
 % end
-% %% Убираю выход за ограничение на Psi(y) < constr2
-% % если кривая уже корректировалась 
-% % из-за выхода за ограничение по dPsi(y) / dy. Вместо точки Y_0 надо взять
-% % Y_0 = [data1(1,end) data1(2,end) data1(3,end)*data1(2,end)]; 
-% data = upper_constraint_Psi(Y_0, Y_end, dy); 
-% y_3 = data(1,:);
-% Psi_3 = data(2,:);
-% dPsi_3 = data(3,:);
-% u_3 = Psi_3.*dPsi_3 - sin(y_3);
-% 
-% set(0,'CurrentFigure',1);
-% plot(y_3, Psi_3, 'r');
-% set(0,'CurrentFigure',2);
-% plot(y_3, dPsi_3, 'r');
-% set(0,'CurrentFigure',3);
-% plot(y_3, u_3, 'r');
-% 
-% arr_3 = abs(y - y_3(1));
-% [temp, ind] = min(arr_3);
-% 
-% for i = 1:length(y_3)
-%     u_t(ind + i - 1) = u_3(i);
-% end
-% 
-% plot(y,u_t,'y');
-% 
+%% Убираю выход за ограничение на Psi(y) < constr2
+% если кривая уже корректировалась 
+% из-за выхода за ограничение по dPsi(y) / dy. Вместо точки Y_0 надо взять
+% Y_0 = [data1(1,end) data1(2,end) data1(3,end)*data1(2,end)]; 
+[data, par, coefs] = upper_constraint_Psi(Y_0, Y_end, dy); 
+y_3 = data(1,:);
+Psi_3 = data(2,:);
+dPsi_3 = data(3,:);
+u_3 = Psi_3.*dPsi_3 - sin(y_3);
+
+set(0,'CurrentFigure',1);
+plot(y_3, Psi_3, 'r');
+set(0,'CurrentFigure',2);
+plot(y_3, dPsi_3, 'r');
+set(0,'CurrentFigure',3);
+plot(y_3, u_3, 'r');
+
+arr_3 = abs(y - y_3(1));
+[temp, ind] = min(arr_3);
+
+for i = 1:length(y_3)
+    u_t(ind + i - 1) = u_3(i);
+end
+
+control_arr = [control_arr; ...
+    y_3(1) y_3(end) coefs(1,:) par(1) 1 0 0];
 % %% Убираю выход за ограничение на Psi(y) > constr1
 % % % если кривая уже корректировалась 
 % % % из-за выхода за ограничение по dPsi(y) / dy. Вместо точки Y_0 надо взять
@@ -245,6 +250,74 @@ control_arr = [control_arr; ...
 % % set(0,'CurrentFigure',2);
 % % plot(y_3, dPsi_3, 'r');
 % В значение params первого элемента массива структур записываю значимое количество элементов
-plot(y,u_t,'y');
+
+%% ----debug
+%     y_0_i = control_arr(2,1);
+%     y_end_i = control_arr(2,2);
+%     coefs = control_arr(2,3:6);
+%     c0 = coefs(1);
+%     c1 = coefs(2);
+%     c2 = coefs(3);
+%     c3 = coefs(4);
+%     d = control_arr(2,7);
+%     y_0_glob = control_arr(2,9);
+%     F_quad_i = @(x)1./(c0 + c1*(x - y_0_glob) + c2*(x - y_0_glob).^2 + c3*(x - y_0_glob).^3 +...
+%             d*((x - y_0_i)/(y_end_i - y_0_i)).^2.*(3 - 2*((x - y_0_i)/(y_end_i - y_0_i) )) );
+%     t_i = quad(F_quad_i,y_0_i,y_end_i);
+%     options = odeset('RelTol',1e-6,'AbsTol',[1e-6 1e-6]);
+%     
+%     N = N*10000;
+%     dy_prog = (y_1(end) - y_1(1)) / N;
+%    
+%     
+%     global y_prog Psi_prog dPsi_prog
+%     global dt
+%     dt = t_i/N;
+%     
+%     y_prog = y_1(1):dy_prog:y_1(end);
+%     Psi_prog = c0 + c1*(y_prog - y_0_glob) + c2*(y_prog - y_0_glob).^2 + c3*(y_prog - y_0_glob).^3 +...
+%         d*((y_prog - y_0_i)/(y_end_i - y_0_i)).^2.*(3 - 2*((y_prog - y_0_i)/(y_end_i - y_0_i) ));
+%     dPsi_prog = c1 + 2*c2*(y_prog - y_0_glob) + 3*c3*(y_prog - y_0_glob).^2 + ...
+%         d*(6*((y_prog - y_0_i)/(y_end_i - y_0_i)) - 6*((y_prog - y_0_i)/(y_end_i - y_0_i)).^2);
+%     
+%     [T, Y] = ode45(@kan_system_debug, [0, t_i], [y_1(1) Psi_1(1)], options);
+    
+%     Y = zeros(N+1,2);
+%     Y(1,:) = [y_1(1) Psi_1(1)];
+%    
+%     i = 1;
+%     
+%     r1 = -6; r2 = -6;
+%     c1_st = -(r1 + r2);
+%     c0_st = r1*r2;
+% 
+%     
+%     for t=0:dt:t_i
+%         Psi = c0 + c1*(Y(i,1) - y_0_glob) + c2*(Y(i,1) - y_0_glob)^2 + c3*(Y(i,1) - y_0_glob)^3 +...
+%         d*((Y(i,1) - y_0_i)/(y_end_i - y_0_i))^2*(3 - 2*((Y(i,1) - y_0_i)/(y_end_i - y_0_i) ));
+% 
+%         dPsi = c1 + 2*c2*(Y(i,1) - y_0_glob) + 3*c3*(Y(i,1) - y_0_glob)^2 + ...
+%         d*(6*((Y(i,1) - y_0_i)/(y_end_i - y_0_i)) - 6*((Y(i,1) - y_0_i)/(y_end_i - y_0_i))^2);
+% 
+% 
+%         % u = Psi*dPsi - sin(Y(i,1));
+%         u = Psi_prog(i)*dPsi_prog(i) - sin(Y(i,1)) - c1_st*(Y(i,2) - Psi_prog(i)) - c0_st*(Y(i,1) - y_prog(i));
+%         Y(i+1,1) = y_prog(i) + Psi_prog(i)*dt;
+%         Y(i+1,2) = Psi_prog(i) + (Psi_prog(i)*dPsi_prog(i))*dt;
+%         
+%         Y(i+1,1) = Y(i,1) + Y(i,2)*dt;
+%         Y(i+1,2) = Y(i,2) + (sin(Y(i,1)) + u)*dt;
+%         
+%         i = i+1;
+%     end
+%     set(0,'CurrentFigure',1);
+%     plot(Y(:,1), Y(:,2),'y');
+%%
+
+% plot(y,u_t,'y');
+
 
 traj = time_modeling(Y_0);
+
+set(0,'CurrentFigure',1);
+plot(traj(:,1), traj(:,2),'y');

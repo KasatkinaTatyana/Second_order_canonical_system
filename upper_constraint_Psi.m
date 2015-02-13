@@ -1,4 +1,4 @@
-function F = upper_constraint_Psi(Y_0, Y_end, dy)
+function [F, params, coefs] = upper_constraint_Psi(Y_0, Y_end, dy)
 % ‘ункци€ генерирует кривую, отрезок, на котором она строитс€, и ее
 % производную таким образом, чтобы выполн€лось ограничение Psi(y) / dy <
 % constr2
@@ -85,3 +85,7 @@ else
     disp('јлгоритм завершил свою работу');
     F = false;
 end
+
+params = [d_lims(2); 0; 0];
+
+coefs = [calc_coefs(y_left, y_right); 0 0 0 0; 0 0 0 0];
