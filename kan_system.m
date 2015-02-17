@@ -4,13 +4,16 @@ dy = zeros(2,1);
 global control_arr
 global count
 
-global y_prog Psi_prog dPsi_prog
-global dt
+% global y_prog Psi_prog dPsi_prog
+% global dt
 
+global c0 c1 c2 c3 y_0_c y_0_i y_end_i d
+global Mas_u
 
 flag = false;
+
 % ¬последствии надо сделать от count до 2
-for i=2:count
+for i=1:count
     y_0_i = control_arr(i,1);
     y_end_i = control_arr(i,2);
     
@@ -21,61 +24,77 @@ for i=2:count
         c2 = coefs(3);
         c3 = coefs(4);
         d = control_arr(i,7);
+        y_0_c = control_arr(i,9);
+        t_0 = control_arr(i,10);
         
         if (abs(control_arr(i,8) - 1) < 1e-6)
-            Psi = c0 + c1*(y(1) - y_0_i) + c2*(y(1) - y_0_i)^2 + c3*(y(1) - y_0_i)^3 + d*(y(1) - y_0_i)^2*(y(1) - y_end_i)^2;
+            [T, Y] = ode45(@Trajectory_type_1,[t_0 t], y_0_i);
+            y_t = Y(end);
             
-            dPsi = c1 + 2*c2*(y(1) - y_0_i) + 3*c3*(y(1) - y_0_i)^2 + ...
-                2*d*(y(1) - y_0_i)^2*(y(1) - y_end_i) + 2*d*(y(1) - y_0_i)*(y(1) - y_end_i)^2;
-            u = Psi*dPsi - sin(y(1));
+            Psi_t = c0 + c1*(y_t - y_0_i) + c2*(y_t - y_0_i)^2 + c3*(y_t - y_0_i)^3 + d*(y_t - y_0_i)^2*(y_t - y_end_i)^2;
+            
+            dPsi_t = c1 + 2*c2*(y_t - y_0_i) + 3*c3*(y_t - y_0_i)^2 + ...
+                2*d*(y_t - y_0_i)^2*(y_t - y_end_i) + 2*d*(y_t - y_0_i)*(y_t - y_end_i)^2;
+            u = Psi_t*dPsi_t - sin(y(1));
              
-        elseif (abs(control_arr(i,8) - 2) < 1e-6)
-            y_0_glob = control_arr(i,9);
-            t_0 = control_arr(i,10);
-            Psi = c0 + c1*(y(1) - y_0_glob) + c2*(y(1) - y_0_glob)^2 + c3*(y(1) - y_0_glob)^3 +...
-                d*((y(1) - y_0_i)/(y_end_i - y_0_i))^2*(3 - 2*((y(1) - y_0_i)/(y_end_i - y_0_i) ));
+        elseif (abs(control_arr(i,8) - 2) < 1e-6)           
+            [T, Y] = ode45(@Trajectory_type_2,[t_0 t], y_0_i);
+            y_t = Y(end);
             
-            dPsi = c1 + 2*c2*(y(1) - y_0_glob) + 3*c3*(y(1) - y_0_glob)^2 + ...
-                d*(6*((y(1) - y_0_i)/(y_end_i - y_0_i)) - 6*((y(1) - y_0_i)/(y_end_i - y_0_i))^2);
-            r1 = -0.01; r2 = -10;
+            Psi_t = c0 + c1*(y_t - y_0_c) + c2*(y_t - y_0_c)^2 + c3*(y_t - y_0_c)^3 +...
+                d*((y_t - y_0_i)/(y_end_i - y_0_i))^2*(3 - 2*((y_t - y_0_i)/(y_end_i - y_0_i) ));
+            
+            dPsi_t = c1 + 2*c2*(y_t - y_0_c) + 3*c3*(y_t - y_0_c)^2 + ...
+                d*(6*((y_t - y_0_i)/(y_end_i - y_0_i)) - 6*((y_t - y_0_i)/(y_end_i - y_0_i))^2);
+            r1 = -30; r2 = -1;
             c1_st = -(r1 + r2);
             c0_st = r1*r2;
 
-            ind = floor((t - t_0)/dt) + 1;
-            
-            if (ind > length(Psi_prog))
-                ind = length(Psi_prog);
+            u = Psi_t*dPsi_t - sin(y(1)) - c1_st*(y(2) - Psi_t) - c0_st*(y(1) - y_t);
+        else         
+            if (t_0 == t)
+                y_t = y_0_i;
+            else
+                [T, Y] = ode45(@Trajectory_type_0,[t_0 t], y_0_i);
+                y_t = Y(end);
             end
-            
-            u = Psi_prog(ind)*dPsi_prog(ind) - sin(y(1)) - c1_st*(y(2) - Psi_prog(ind)) - c0_st*(y(1) - y_prog(ind));
-
-        else
-            Psi = c0 + c1*(y(1) - y_0_i) + c2*(y(1) - y_0_i)^2 + c3*(y(1) - y_0_i)^3;
-            dPsi = c1 + 2*c2*(y(1) - y_0_i) + 3*c3*(y(1) - y_0_i)^2;
-            u = Psi*dPsi - sin(y(1));
-        end       
+            Psi_t = c0 + c1*(y_t - y_0_c) + c2*(y_t - y_0_c)^2 + c3*(y_t - y_0_c)^3;
+            dPsi_t = c1 + 2*c2*(y_t - y_0_c) + 3*c3*(y_t - y_0_c)^2;
+            u = Psi_t*dPsi_t - sin(y(1));
+        end 
         flag = true;
-    end
-    
-    if (flag == true)
         break;
     end
+    
 end
 
+% последн€€ точка ?
 if (flag == false)
-    y_0 = control_arr(1,1);
-    coefs = control_arr(1,3:6);
+    y_0 = control_arr(count,1);
+    
+    coefs = control_arr(count,3:6);
     c0 = coefs(1);
     c1 = coefs(2);
     c2 = coefs(3);
     c3 = coefs(4);
-    Psi = c0 + c1*(y(1) - y_0) + c2*(y(1) - y_0)^2 + c3*(y(1) - y_0)^3;
-    dPsi = c1 + 2*c2*(y(1) - y_0) + 3*c3*(y(1) - y_0)^2;
-    u = Psi*dPsi - sin(y(1));
+
+    y_0_c = control_arr(count,9);
+    t_0 = control_arr(count,10);
+    
+    if (t_0 == t)
+        y_t = y_0_i;
+    else
+        [T, Y] = ode45(@Trajectory_type_0,[t_0 t], y_0);
+        y_t = Y(end);
+    end
+    Psi_t = c0 + c1*(y_t - y_0_c) + c2*(y_t - y_0_c)^2 + c3*(y_t - y_0_c)^3;
+    dPsi_t = c1 + 2*c2*(y_t - y_0_c) + 3*c3*(y_t - y_0_c)^2;
+    u = Psi_t*dPsi_t - sin(y(1));
 end
 
-
 plot(y(1), u,'Marker','*');
+
+Mas_u = [Mas_u; y(1) u];
 
 dy(1) = y(2);
 dy(2) = sin(y(1)) + u;
