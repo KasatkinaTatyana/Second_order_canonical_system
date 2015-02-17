@@ -76,7 +76,7 @@ y_2 = y_right(1):dy:Y_end(1);
 F1 = [y_1; Psi_1; dPsi_1];
 F2 = [y_2; Psi_2; dPsi_2];
 
-params = [d; Y_0(1); 0];
+params = [d; Y_0(1); y_right(1)];
 
 coefs_2 = calc_coefs(Y_1_end, Y_end);
 
