@@ -1,4 +1,6 @@
 function F = add_control_branch(row)
+% Функция добавляет в массив control_arr, описывающий фазовую кривую
+% системы новую строку row
 global control_arr
 
 N = length(control_arr(:,1));

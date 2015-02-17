@@ -4,15 +4,14 @@ dy = zeros(2,1);
 global control_arr
 global count
 
-% global y_prog Psi_prog dPsi_prog
-% global dt
-
-global c0 c1 c2 c3 y_0_c y_0_i y_end_i d
+global c0 c1 c2 c3 y_0_c y_0_i y_end_i d % объявлены глобальными, чтобы интегрировать систему уравнение dy /dt = Psi(y) по времени
 global Mas_u
 
 flag = false;
 
-% Впоследствии надо сделать от count до 2
+% Для каждого типа кривой (8 координата в строках массива control_arr)
+% управление строится по своему
+
 for i=1:count
     y_0_i = control_arr(i,1);
     y_end_i = control_arr(i,2);

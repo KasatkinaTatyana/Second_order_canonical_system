@@ -1,4 +1,5 @@
 function F = time_modeling(Y_0)
+% В данной функции производится интегрирование системы по времени
 global control_arr
 
 control_arr = sortrows(control_arr,1);
@@ -47,7 +48,7 @@ end
 %%
 
 options = odeset('RelTol',1e-6,'AbsTol',[1e-6 1e-6]);
-global Mas_u
+global Mas_u % массив управлений
 [T, Y] = ode45(@kan_system, [0, tend], [Y_0(1) Y_0(2)], options);
 
 figure();
