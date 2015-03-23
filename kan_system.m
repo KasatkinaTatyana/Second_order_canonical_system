@@ -44,8 +44,8 @@ for i=1:count
                 d*((y_t - y_0_i)/(y_end_i - y_0_i))^2*(3 - 2*((y_t - y_0_i)/(y_end_i - y_0_i) ));
             
             dPsi_t = c1 + 2*c2*(y_t - y_0_c) + 3*c3*(y_t - y_0_c)^2 + ...
-                d*(6*((y_t - y_0_i)/(y_end_i - y_0_i)) - 6*((y_t - y_0_i)/(y_end_i - y_0_i))^2);
-            r1 = -30; r2 = -1;
+                d*(6*(y_t - y_0_i)/(y_end_i - y_0_i)^2 - 6*(y_t - y_0_i)^2/(y_end_i - y_0_i)^3);
+            r1 = -1; r2 = -0.1;
             c1_st = -(r1 + r2);
             c0_st = r1*r2;
 

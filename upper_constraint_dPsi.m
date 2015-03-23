@@ -67,7 +67,8 @@ y_norm = (y_1 - y_left(1)) / (y_right(1) - y_left(1));
 h_d = -0.01;
 for d = 0:h_d:(-10)
     Psi_1 = c0 + c1*(y_1 - Y_0(1)) + c2*(y_1 - Y_0(1)).^2 + c3*(y_1 - Y_0(1)).^3 + d*y_norm.^2.*(3 - 2*y_norm);
-    dPsi_1 = c1 + 2*c2*(y_1 - Y_0(1)) + 3*c3*(y_1 - Y_0(1)).^2 + d*(6*y_norm - 6*y_norm.^2);
+    dPsi_1 = c1 + 2*c2*(y_1 - Y_0(1)) + 3*c3*(y_1 - Y_0(1)).^2 + d*(6* (y_1 - y_left(1)) / (y_right(1) - y_left(1))^2 ...
+        - 6*(y_1 - y_left(1)).^2 / (y_right(1) - y_left(1))^3);
     if (max(dPsi_1) < dy_constr2)
         break;
     end

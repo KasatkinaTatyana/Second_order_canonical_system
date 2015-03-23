@@ -16,8 +16,8 @@ ddyend = uend + sin(yend);
 
 
 global constr1 constr2
-constr1 = -0.85;
-constr2 = 1.6;
+constr1 = 0.3;
+constr2 = 0.7;
 dy_constr1 = -1.8;
 dy_constr2 = 0.5;
 %%
@@ -54,9 +54,9 @@ d = 0;
 %%
 figure(1);
 hold on; grid on;
-title('Psi(y)');
+% title('Psi(y)');
 xlabel('y');
-ylabel('dy / d\tau');
+ylabel('dy / dt');
 
 dy = (Y_end(1) - Y_0(1)) / N;
 y=Y_0(1):dy:Y_end(1);
@@ -69,15 +69,15 @@ plot(y,Psi);
 figure(2);
 hold on; grid on;
 xlabel('y');
-ylabel('dy / d\tau');
-title('dPsi(y) / dy');
+ylabel('dy / dt');
+% title('dPsi(y) / dy');
 plot(y,dPsi,'b');
 
 figure(3);
 hold on; grid on;
-xlabel('y');
-ylabel('dy / d\tau');
-title('Управление u(y)');
+xlabel('y(t)');
+ylabel('u(y(t))');
+% title('Управление u(y)');
 u = Psi.*dPsi - sin(y);
 
 u_t = u; % управление, которое используется для моделирования
@@ -137,7 +137,7 @@ control_arr = [Y_0(1) Y_end(1) c0 c1 c2 c3 0 0 Y_0(1) 0];
 % 
 % add_control_branch(row);
 
-% %% Убираю выход за ограничение dPsi / dy > dy_constr1
+%% Убираю выход за ограничение dPsi / dy > dy_constr1
 [data1, data2, par, coefs] = lower_constraint_dPsi(Y_0, Y_end, dy, dy_constr1);
 y_1 = data1(1,:);
 Psi_1 = data1(2,:);
@@ -149,18 +149,18 @@ dPsi_2 = data2(3,:);
 u_2 = Psi_2.*dPsi_2 - sin(y_2);
 
 set(0,'CurrentFigure',1);
-plot(y_1, Psi_1, 'g');
-plot(y_2, Psi_2, 'm');
+plot(y_1, Psi_1, 'LineStyle','--','Color','b','LineWidth', 2); % color g
+plot(y_2, Psi_2, 'LineStyle','--','Color','b','LineWidth', 2); % color m
 
 set(0,'CurrentFigure',2);
-plot(y_1, dPsi_1, 'g');
-plot(y_2, dPsi_2, 'm');
+plot(y_1, dPsi_1, 'LineStyle','--','Color','b','LineWidth', 2); % color g
+plot(y_2, dPsi_2, 'LineStyle','--','Color','b','LineWidth', 2); % color m
 
 set(0,'CurrentFigure',3);
-plot(y_1, u_1, 'g');
-plot(y_2, u_2, 'm');
+plot(y_1, u_1, 'LineStyle','--','Color','b','LineWidth', 2); % color g
+plot(y_2, u_2, 'LineStyle','--','Color','b','LineWidth', 2); % color m
 
-%% параллельно формирую управление u_t, которое нужно только для контроля
+% параллельно формирую управление u_t, которое нужно только для контроля
 % управления
   
 arr_1 = abs(y - y_1(1));
@@ -186,7 +186,6 @@ row = [y_2(1) y_2(end) coefs(2,:) 0 0 par(3) 0];
 add_control_branch(row);
 %% Но производная все еще выходит за ограничение, поэтому провожу процедуру
 %  коректировки второй раз
-
 % Y_0_new = [data1(1,end) data1(2,end) data1(3,end)*data1(2,end)];
 % [data1, data2, par, coefs] = lower_constraint_dPsi(Y_0_new, Y_end, dy, dy_constr1);
 % y_1 = data1(1,:);
@@ -209,7 +208,7 @@ add_control_branch(row);
 % set(0,'CurrentFigure',3);
 % plot(y_1, u_1, 'g');
 % plot(y_2, u_2, 'm');
-%
+% 
 % arr_1 = abs(y - y_1(1));
 % [temp, ind] = min(arr_1);
 % 
@@ -232,31 +231,31 @@ add_control_branch(row);
 % add_control_branch(row);
 %% Убираю выход за ограничение на Psi(y) < constr2
 % если кривая уже корректировалась 
-% из-за выхода за ограничение по dPsi(y) / dy. Вместо точки Y_0 надо взять
-% Y_0 = [data1(1,end) data1(2,end) data1(3,end)*data1(2,end)]; 
-[data, par, coefs] = upper_constraint_Psi(Y_0, Y_end, dy); 
-y_3 = data(1,:);
-Psi_3 = data(2,:);
-dPsi_3 = data(3,:);
-u_3 = Psi_3.*dPsi_3 - sin(y_3);
+% из-за выхода за ограничение по dPsi(y) / dy. Вместо точки Y_0 надо взять Y_0 = [data1(1,end) data1(2,end) data1(3,end)*data1(2,end)];
 
-set(0,'CurrentFigure',1);
-plot(y_3, Psi_3, 'r');
-set(0,'CurrentFigure',2);
-plot(y_3, dPsi_3, 'r');
-set(0,'CurrentFigure',3);
-plot(y_3, u_3, 'r');
-
-arr_3 = abs(y - y_3(1));
-[temp, ind] = min(arr_3);
-
-for i = 1:length(y_3)
-    u_t(ind + i - 1) = u_3(i);
-end
-
-row = [y_3(1) y_3(end) coefs(1,:) par(1) 1 0 0];
-
-add_control_branch(row);
+% [data, par, coefs] = upper_constraint_Psi(Y_0, Y_end, dy); 
+% y_3 = data(1,:);
+% Psi_3 = data(2,:);
+% dPsi_3 = data(3,:);
+% u_3 = Psi_3.*dPsi_3 - sin(y_3);
+% 
+% set(0,'CurrentFigure',1);
+% plot(y_3, Psi_3, 'LineStyle','--','Color','b','LineWidth', 2); % color r
+% set(0,'CurrentFigure',2);
+% plot(y_3, dPsi_3, 'LineStyle','--','Color','b','LineWidth', 2); % color r
+% set(0,'CurrentFigure',3);
+% plot(y_3, u_3, 'LineStyle','--','Color','b','LineWidth', 2); % color r
+% 
+% arr_3 = abs(y - y_3(1));
+% [temp, ind] = min(arr_3);
+% 
+% for i = 1:length(y_3)
+%     u_t(ind + i - 1) = u_3(i);
+% end
+% 
+% row = [y_3(1) y_3(end) coefs(1,:) par(1) 1 0 0];
+% 
+% add_control_branch(row);
 %% Убираю выход за ограничение на Psi(y) > constr1
 % % если кривая уже корректировалась 
 % % из-за выхода за ограничение по dPsi(y) / dy. Вместо точки Y_0 надо взять
@@ -265,19 +264,50 @@ add_control_branch(row);
 % y_3 = data(1,:);
 % Psi_3 = data(2,:);
 % dPsi_3 = data(3,:);
+% u_3 = Psi_3.*dPsi_3 - sin(y_3);
+% 
+% set(0,'CurrentFigure',1);
+% plot(y_3, Psi_3, 'LineStyle','-','Color','r','LineWidth', 1); % color r
+% set(0,'CurrentFigure',2);
+% plot(y_3, dPsi_3, 'LineStyle','-','Color','r','LineWidth', 1); % color r
+% set(0,'CurrentFigure',3);
+% plot(y_3, u_3, 'LineStyle','-','Color','r','LineWidth', 1); % color r
+% 
+% arr_3 = abs(y - y_3(1));
+% [temp, ind] = min(arr_3);
+% 
+% for i = 1:length(y_3)
+%     u_t(ind + i - 1) = u_3(i);
+% end
 % row = [y_3(1) y_3(end) coefs(1,:) par(1) 1 0 0];
 % add_control_branch(row);
 % 
 % set(0,'CurrentFigure',1);
-% plot(y_3, Psi_3, 'r','LineWidth',2);
+% plot(y_3, Psi_3, 'r','LineWidth',1);
 % set(0,'CurrentFigure',2);
 % plot(y_3, dPsi_3, 'r');
 
+%% программное управление
+figure(4);
+hold on; grid on
+xlabel('y(t)'); ylabel('u(y(t))');
+plot(y,u_t,'b');
 
-% plot(y,u_t,'y');
+%% стабилизирующее управление
+figure(5);
+hold on; grid on;
 
-% интегрирование системы по времени
-traj = time_modeling(Y_0);
+%% интегрирование системы по времени
+[time, traj] = time_modeling(Y_0);
 
-set(0,'CurrentFigure',1);
-plot(traj(:,1), traj(:,2),'y');
+% set(0,'CurrentFigure',1);
+% plot(traj(:,1), traj(:,2),'y');
+
+figure(6);
+subplot(2,1,1);
+plot(time,traj(:,1));
+xlabel('t, c'); ylabel('y(t)');
+
+subplot(2,1,2);
+plot(time,traj(:,2));
+xlabel('t, c'); ylabel('dy / dt');

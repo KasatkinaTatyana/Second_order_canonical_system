@@ -1,4 +1,4 @@
-function F = time_modeling(Y_0)
+function [time, F] = time_modeling(Y_0)
 % В данной функции производится интегрирование системы по времени
 global control_arr
 
@@ -52,5 +52,8 @@ global Mas_u % массив управлений
 [T, Y] = ode45(@kan_system, [0, tend], [Y_0(1) Y_0(2)], options);
 
 figure();
+hold on; grid on;
+xlabel('y(t)'); ylabel('u(y(t))');
 plot(Mas_u(:,1),Mas_u(:,2));
 F = Y;
+time = T;
